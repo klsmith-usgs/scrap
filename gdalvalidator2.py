@@ -35,26 +35,18 @@ class GDALValidator(osr.SpatialReference):
         :type num: int
         :return: associated error message
         """
-        if num == 0:
-            return None
-        elif num == 1:
-            return 'OGRERR_NOT_ENOUGH_DATA'
-        elif num == 2:
-            return 'OGRERR_NOT_ENOUGH_MEMORY'
-        elif num == 3:
-            return 'OGRERR_UNSUPPORTED_GEOMETRY_TYPE'
-        elif num == 4:
-            return 'OGRERR_UNSUPPORTED_OPERATION'
-        elif num == 5:
-            return 'OGRERR_CORRUPT_DATA'
-        elif num == 6:
-            return 'OGRERR_FAILURE'
-        elif num == 7:
-            return 'OGRERR_UNSUPPORTED_SRS'
-        elif num == 8:
-            return 'OGRERR_INVALID_HANDLE'
-        elif num == 9:
-            return 'OGRERR_NON_EXISTING_FEATURE'
+        err_msg = {1: 'OGRERR_NOT_ENOUGH_DATA',
+                   2: 'OGRERR_NOT_ENOUGH_MEMORY',
+                   3: 'OGRERR_UNSUPPORTED_GEOMETRY_TYPE',
+                   4: 'OGRERR_UNSUPPORTED_OPERATION',
+                   5: 'OGRERR_CORRUPT_DATA',
+                   6: 'OGRERR_FAILURE',
+                   7: 'OGRERR_UNSUPPORTED_SRS',
+                   8: 'OGRERR_INVALID_HANDLE',
+                   9: 'OGRERR_NON_EXISTING_FEATURE'}
+
+        if num in err_msg.keys():
+            return err_msg[num]
         else:
             return 'Unknown GDAL/OGR Error'
 
