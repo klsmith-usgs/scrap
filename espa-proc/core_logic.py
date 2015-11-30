@@ -62,7 +62,9 @@ class OrderLogic(object):
         # if something is requested that is not supported
         self.required_methods = TMprocessing.get_methodlist(self.final_package)
         # or
-        self.required_methods = ETMprocessing.get_methodlist(self.final_package)
+        # self.required_methods = ETMprocessing.get_methodlist(self.final_package)
+        # or
+        # ...
 
     def determine_attributes(self):
         # Contruct the attributes that will be built into

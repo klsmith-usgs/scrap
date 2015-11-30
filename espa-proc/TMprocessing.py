@@ -52,7 +52,7 @@ def proc_statistics(self):
     print 'statistics'
 
 
-# Testing, WiP
+# For visualization purposes, WiP
 source = {'source': proc_source}
 
 toa = {'source': proc_source,
