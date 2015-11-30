@@ -3,19 +3,31 @@ import json
 from settings import *
 from environment import *
 
-# Either organize the imported methods by science app or by sensor
+# Either organize the imported methods by sensor
 # Pull the relevant processing methods from the import
 # and add to a common class that contains such methods as packaging,
 # moving files, other common operations,
 # and any operations that carry over all sensors
 import TMprocessing
 import ETMprocessing
-# or maybe
-# import LEDAPSprocessing
+import OLIprocessing
 
+
+imports = {'TM': TMprocessing,
+           'ETM': ETMprocessing,
+           'OLI': OLIprocessing}
 
 # Should come from the settings or environment import
 TEMPLATE = 'template.json'
+
+# Just for testing purposes, also allows for things to be
+# added serially and taken off the list
+TEMP_UNSUPPORTED_INCLUDES = ('customized_source_data',
+                             'solr_index',
+                             'source_data_metadata',
+                             'sr_browse',
+                             'sr_thermal',
+                             'statistics')
 
 
 class OrderLogic(object):
@@ -41,6 +53,8 @@ class OrderLogic(object):
         self.required_methods = {}
         self.proc_attributes = {}
 
+        self.determine_attributes()
+
     def verify_order(self):
         # Verify the dictionary keys in jorder match jtemplate
         # Possibly determine the differences to return an Exception
@@ -53,18 +67,15 @@ class OrderLogic(object):
         # Get the steps required for requested product
 
         # Determine what processes need to happen
+
         for key, value in self.jorder['options'].items():
-            if value:
+            if value and key[8:] not in TEMP_UNSUPPORTED_INCLUDES:
                 self.final_package.append(key[8:])
 
-        # Should be wrapped in a try/except
-        # sensor.get_methodlist should return an exception
-        # if something is requested that is not supported
-        self.required_methods = TMprocessing.get_methodlist(self.final_package)
-        # or
-        # self.required_methods = ETMprocessing.get_methodlist(self.final_package)
-        # or
-        # ...
+        try:
+            self.required_methods, self.proc_attributes['exec_order'] = imports['TM'].get_methodlist(self.final_package)
+        except Exception:
+            raise
 
     def determine_attributes(self):
         # Contruct the attributes that will be built into
@@ -82,10 +93,9 @@ class OrderLogic(object):
             for key, value in kwargs.items():
                 setattr(self, key, value)
 
-        build_methods = self.required_methods
-        build_methods['__init__'] = __init__
+        self.required_methods['__init__'] = __init__
 
-        return type(self.name, (ProcessClass,), build_methods)
+        return type(self.name, (ProcessClass,), self.required_methods)
 
     def get_processor(self):
         newclass = self.class_factory()
@@ -100,8 +110,8 @@ class ProcessClass(object):
         pass
 
     def run(self):
-        # Run the required methods in correct order
-        pass
+        for proc in self.exec_order:
+            self.proc()
 
     def debug_methods(self):
         # Return the methods and attributes
