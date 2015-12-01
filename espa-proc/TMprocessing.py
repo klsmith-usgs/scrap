@@ -30,12 +30,13 @@ def get_methodlist(requested):
         for new in diff:
             out_methods[new] = rmethods[new]
 
-    exec_order = tuple()
+    exec_order = []
     for proc in PROC_ORDER:
             if proc in out_methods.keys():
-                exec_order += (proc,)
+                exec_order.append(proc)
 
-    return out_methods, exec_order
+    return out_methods, tuple(exec_order)
+
 
 def proc_source(self):
     print 'process source'
@@ -101,7 +102,7 @@ def proc_list(prod):
     if prod in products.keys():
         return products['prod']
     elif prod in VALID_INDICIES:
-        return products['srindicies']
+        return products['sr_indicies']
     else:
         return ''
 
