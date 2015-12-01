@@ -97,7 +97,7 @@ class OrderLogic(object):
 
         def __init__(self, atts):
             # super(name, self).__init__()
-            ProcessClass.__init__(self, name)
+            ProcessClass.__init__(self)
 
             for key, value in atts.items():
                 setattr(self, key, value)
@@ -115,8 +115,9 @@ class ProcessClass(object):
     """
     Contains the common base processing methods
     """
-    def __init__(self, classtype):
-        self._type = classtype
+    def __init__(self):
+        # self._type = classtype
+        pass
 
     def run(self):
         # Place holder loop for visualization
@@ -150,8 +151,8 @@ if __name__ == '__main__':
         if json_file[-4:] == 'json':
             json_order = os.path.join(test_dir, json_file)
             processor = OrderLogic(json_order).get_processor()
-            processor.debug_methods()
-            processor.debug_attributes()
+            print processor.debug_methods()
+            print processor.debug_attributes()
             quit()
 
     # if debug:
