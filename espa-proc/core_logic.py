@@ -53,6 +53,7 @@ class OrderLogic(object):
         self.required_methods = {}
         self.proc_attributes = {}
 
+        self.determine_requirements()
         self.determine_attributes()
 
     def verify_order(self):
@@ -111,8 +112,9 @@ class ProcessClass(object):
 
     def run(self):
         # Place holder loop
-        for proc in self.exec_order:
-            self.proc()
+        # for proc in self.exec_order:
+        #     self.proc()
+        pass
 
     def debug_methods(self):
         # Return the methods and attributes
