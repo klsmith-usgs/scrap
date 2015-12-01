@@ -35,6 +35,8 @@ class OrderLogic(object):
     # Build a list of operations that are needed to carry out
     # Bonus provide the methods with the information built in
     def __init__(self, jorder, local_debug=False):
+        self.order_file = jorder
+
         with open(TEMPLATE, 'r') as f:
             self.jtemplate = json.load(f)
 
@@ -57,15 +59,14 @@ class OrderLogic(object):
         self.determine_requirements()
         self.determine_attributes()
 
-        print self.jorder
-        print self.required_methods
-        print self.proc_attributes
-
         if local_debug:
             self.debug()
 
     def debug(self):
-        pass
+        print('\nInput JSON:\n{1}\n{0}'.format(json.dumps(self.jorder, sort_keys=True, indent=4),
+                                               self.order_file))
+        print('\nRequired Methods:\n{0}'.format(self.required_methods.keys()))
+        print('\nAttributes Built:\n{0}'.format(json.dumps(self.proc_attributes, sort_keys=True, indent=4)))
 
     def verify_order(self):
         # Verify the dictionary keys in jorder match jtemplate
@@ -90,7 +91,7 @@ class OrderLogic(object):
             raise
 
     def determine_attributes(self):
-        # Contruct the attributes that will be built into
+        # Construct the attributes that will be built into
         # the processing class
         # most of which will be based on the settings and
         # environment imports, and the method list
@@ -99,7 +100,7 @@ class OrderLogic(object):
     def class_factory(self):
         # Build the class that will do the processing
         # with the dictionary of the relevant methods
-        name = self.name
+        # name = self.name
 
         def __init__(self, atts):
             # super(name, self).__init__()
@@ -110,7 +111,7 @@ class OrderLogic(object):
 
         self.required_methods['__init__'] = __init__
 
-        return type(name, (ProcessClass,), self.required_methods)
+        return type(self.name, (ProcessClass,), self.required_methods)
 
     def get_processor(self):
         newclass = self.class_factory()
@@ -156,7 +157,7 @@ if __name__ == '__main__':
     for json_file in os.listdir(test_dir):
         if json_file[-4:] == 'json':
             json_order = os.path.join(test_dir, json_file)
-            processor = OrderLogic(json_order).get_processor()
+            processor = OrderLogic(json_order, local_debug=True).get_processor()
             print processor.debug_methods()
             print processor.debug_attributes()
             # quit()
