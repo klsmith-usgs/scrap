@@ -33,11 +33,11 @@ TEMP_UNSUPPORTED_INCLUDES = ('customized_source_data',
 class OrderLogic(object):
     # Build a list of operations that are needed to carry out
     # Bonus provide the methods with the information built in
-    def __init__(self, json_order):
+    def __init__(self, jorder):
         with open(TEMPLATE, 'r') as f:
             self.jtemplate = json.load(f)
 
-        self.jorder = json.load(json_order)
+        self.jorder = json.load(jorder)
 
         # Determine which module to pull methods from
         # Or possibly multiple modules in cases of
