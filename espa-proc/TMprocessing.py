@@ -105,6 +105,7 @@ def proc_list(prod):
     elif prod in VALID_INDICIES:
         return products['sr_indicies']
     else:
+        # Should raise warning
         return products['source_data']
 
 

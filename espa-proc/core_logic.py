@@ -34,7 +34,7 @@ TEMP_UNSUPPORTED_INCLUDES = ('customized_source_data',
 class OrderLogic(object):
     # Build a list of operations that are needed to carry out
     # Bonus provide the methods with the information built in
-    def __init__(self, jorder):
+    def __init__(self, jorder, local_debug=False):
         with open(TEMPLATE, 'r') as f:
             self.jtemplate = json.load(f)
 
@@ -60,6 +60,12 @@ class OrderLogic(object):
         print self.jorder
         print self.required_methods
         print self.proc_attributes
+
+        if local_debug:
+            self.debug()
+
+    def debug(self):
+        pass
 
     def verify_order(self):
         # Verify the dictionary keys in jorder match jtemplate
