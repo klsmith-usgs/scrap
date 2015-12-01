@@ -103,7 +103,7 @@ class OrderLogic(object):
 
         def __init__(self, atts):
             # super(name, self).__init__()
-            ProcessClass.__init__(self)
+            # ProcessClass.__init__(self)
 
             for key, value in atts.items():
                 setattr(self, key, value)
