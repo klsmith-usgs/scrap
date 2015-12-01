@@ -1,4 +1,13 @@
+import subprocess
+import os
+
 from osgeo import osr
+
+
+# Should come from some config file
+GDAL_WARP_PATH = r'C:\Program Files\GDAL\gdalwarp.exe'
+GDAL_BASE_PATH = r'C:\Program Files\GDAL'
+
 
 class GDALValidator(osr.SpatialReference):
     """
@@ -11,6 +20,8 @@ class GDALValidator(osr.SpatialReference):
         self.valid = False
         self.err_num = 5
         self.err_msg = self.ogrerr_msg(self.err_num)
+        self.warp_path = GDAL_WARP_PATH
+        self.proj_str = ''
 
     def __nonzero__(self):
         return self.valid
@@ -19,7 +30,7 @@ class GDALValidator(osr.SpatialReference):
         self.err_num = self.Validate()
         self.err_msg = self.ogrerr_msg(self.err_num)
 
-        if not self.err_num:
+        if not self.err_num and self.check_warp():
             self.valid = True
 
     @staticmethod
@@ -50,6 +61,22 @@ class GDALValidator(osr.SpatialReference):
         else:
             return 'Unknown GDAL/OGR Error'
 
+    def check_warp(self):
+        # Otherwise windows throws an access denied
+        # Alternative is to put a shell=True into the call
+        os.chdir(GDAL_BASE_PATH)
+
+        try:
+            result = subprocess.check_output([self.warp_path, '-t_srs', self.proj_str],
+                                             stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            result = e.output
+
+        if 'ERROR' in result:
+            return False
+        else:
+            return True
+
 
 class WKTValidate(GDALValidator):
     """
@@ -57,6 +84,8 @@ class WKTValidate(GDALValidator):
     """
     def __init__(self, wkt=''):
         super(WKTValidate, self).__init__()
+
+        self.proj_str = "{0}".format(wkt)
 
         try:
             self.ImportFromWkt(wkt)
@@ -73,6 +102,8 @@ class Proj4Validate(GDALValidator):
     def __init__(self, proj4=''):
         super(Proj4Validate, self).__init__()
 
+        self.proj_str = "{0}".format(proj4)
+
         try:
             self.ImportFromProj4(proj4)
         except Exception:
@@ -86,6 +117,8 @@ class EPSGValidate(GDALValidator):
     """
     def __init__(self, epsg=None):
         super(EPSGValidate, self).__init__()
+
+        self.proj_str = 'EPSG:{0}'.format(epsg)
 
         try:
             self.ImportFromEPSG(epsg)
