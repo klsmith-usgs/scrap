@@ -153,7 +153,7 @@ if __name__ == '__main__':
             processor = OrderLogic(json_order).get_processor()
             print processor.debug_methods()
             print processor.debug_attributes()
-            quit()
+            # quit()
 
     # if debug:
     #     processor.debug_methods()

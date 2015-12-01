@@ -28,7 +28,8 @@ def get_methodlist(requested):
 
         diff = list(set(out_methods.keys()).symmetric_difference(set(rmethods.keys())))
         for new in diff:
-            out_methods[new] = rmethods[new]
+            if new in rmethods.keys():
+                out_methods[new] = rmethods[new]
 
     exec_order = []
     for proc in PROC_ORDER:
