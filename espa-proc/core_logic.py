@@ -120,7 +120,7 @@ class ProcessClass(object):
         pass
 
     def run(self):
-        # Place holder loop for visualization
+        # Place holder loop for visualization on run order
         # for proc in self.exec_order:
         #     self.proc()
         pass
