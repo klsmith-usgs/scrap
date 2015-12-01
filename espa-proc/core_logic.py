@@ -1,4 +1,5 @@
 import json
+import os
 
 from settings import *
 from environment import *
@@ -37,13 +38,13 @@ class OrderLogic(object):
         with open(TEMPLATE, 'r') as f:
             self.jtemplate = json.load(f)
 
-        self.jorder = json.load(jorder)
+        with open(jorder) as f:
+            self.jorder = json.load(f)
 
         # Determine which module to pull methods from
         # Or possibly multiple modules in cases of
         #  cross-sensor science products
-        self.sensor = self.jorder['product_type']
-
+        # self.sensor = self.jorder['product_type']
         self.name = 'name'  # order plus scene id?
 
         # Test objects to help in thinking about the problem
@@ -55,6 +56,10 @@ class OrderLogic(object):
 
         self.determine_requirements()
         self.determine_attributes()
+
+        print self.jorder
+        print self.required_methods
+        print self.proc_attributes
 
     def verify_order(self):
         # Verify the dictionary keys in jorder match jtemplate
@@ -88,15 +93,18 @@ class OrderLogic(object):
     def class_factory(self):
         # Build the class that will do the processing
         # with the dictionary of the relevant methods
-        def __init__(self, **kwargs):
-            super(self.__name__, self).__init__(**kwargs)
+        name = self.name
 
-            for key, value in kwargs.items():
+        def __init__(self, atts):
+            # super(name, self).__init__()
+            ProcessClass.__init__(self, name)
+
+            for key, value in atts.items():
                 setattr(self, key, value)
 
         self.required_methods['__init__'] = __init__
 
-        return type(self.name, (ProcessClass,), self.required_methods)
+        return type(name, (ProcessClass,), self.required_methods)
 
     def get_processor(self):
         newclass = self.class_factory()
@@ -107,11 +115,11 @@ class ProcessClass(object):
     """
     Contains the common base processing methods
     """
-    def __init__(self):
-        pass
+    def __init__(self, classtype):
+        self._type = classtype
 
     def run(self):
-        # Place holder loop
+        # Place holder loop for visualization
         # for proc in self.exec_order:
         #     self.proc()
         pass
@@ -135,12 +143,19 @@ class ProcessClass(object):
 
 
 if __name__ == '__main__':
-    debug = False
-    json_order = 'some json order'
-    processor = OrderLogic(json_order).get_processor()
+    debug = True
 
-    if debug:
-        processor.debug_methods()
-        processor.debug_attributes()
-    else:
-        processor.run()
+    test_dir = 'D:/ESPA/scrap/espa-proc/test_jsons'
+    for json_file in os.listdir(test_dir):
+        if json_file[-4:] == 'json':
+            json_order = os.path.join(test_dir, json_file)
+            processor = OrderLogic(json_order).get_processor()
+            processor.debug_methods()
+            processor.debug_attributes()
+            quit()
+
+    # if debug:
+    #     processor.debug_methods()
+    #     processor.debug_attributes()
+    # else:
+    #     processor.run()

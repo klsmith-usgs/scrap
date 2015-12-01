@@ -100,11 +100,11 @@ def proc_list(prod):
                         'emislst': proc_emislst}}
 
     if prod in products.keys():
-        return products['prod']
+        return products[prod]
     elif prod in VALID_INDICIES:
         return products['sr_indicies']
     else:
-        return ''
+        return products['source_data']
 
 
 # For visualization purposes, WiP
