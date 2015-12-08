@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#TODO Add error messaging throughout that goes out into the email in case of failure
 
 import smtplib
 import subprocess
@@ -16,6 +17,7 @@ import pexpect
 CFG_NFO = "/home/{0}/.cfgnfo"
 FILE_PATH = os.path.realpath(__file__)
 
+# Will change
 email_from = 'espa@espa.cr.usgs.gov'
 email_to = ['klsmith@usgs.gov']
 email_subject = "LSRD - Auto-credential changing"
@@ -173,6 +175,7 @@ def update_db(passwrd, db_info):
     try:
         with DBConnect(**db_info) as db:
             db.execute(sql_str)
+            db.commit()
 
         return None
     except Exception as e:
@@ -245,6 +248,9 @@ def change_pass(old_pass, new_pass):
     :type new_pass: string
     :return: exception message if fail
     """
+    #TODO Process needs to be verified, especially the regex portions
+    #TODO Needs to return new pass in case it had to generate a new one
+
     child = pexpect.spawn('passwd')
     child.expect('*[Pp]assword: ')
     child.sendline(old_pass)
@@ -264,13 +270,17 @@ def change_pass(old_pass, new_pass):
 
 
 def run():
+    # Written this way for ease of following the process flow in the future
+    # and it doesn't really need to be anything fancy
+
+    #TODO Add verification between steps and error message building for emailing
     username, freq = arg_parser()
     cfg_info = get_cfg(username)
     old_pass = current_pass(cfg_info)
     new_pass = gen_password()
     change_pass(old_pass, new_pass)
-
-    pass
+    update_db(new_pass, cfg_info)
+    update_cron(username, freq)
 
 
 if __name__ == '__main__':
