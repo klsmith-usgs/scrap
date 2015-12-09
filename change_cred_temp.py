@@ -184,7 +184,7 @@ def gen_password(length=16):
     chars = ''.join(char_ls)
 
     i = 0
-    while i <= len(char_ls):
+    while i < len(char_ls):
         i = 0
 
         paswrd = ''.join(random.SystemRandom().choice(chars) for _ in range(length))
@@ -278,10 +278,6 @@ def change_pass(old_pass):
     :return: exception message if fail
     """
     #TODO Process needs to be verified, especially the regex portions
-    #TODO Needs to return new pass in case it had to generate a new one
-
-    new_pass = gen_password()
-
     child = pexpect.spawn('passwd')
     child.expect('*[Pp]assword: ')
     child.sendline(old_pass)
@@ -291,6 +287,7 @@ def change_pass(old_pass):
         raise CredentialException('Password retrieved from DB is incorrect')
 
     i = 1
+    new_pass = gen_password()
     while i:
         child.sendline(new_pass)
         i = child.expect(['Retype new password: ', 'BAD PASSWORD*'])
