@@ -2,6 +2,7 @@
 #TODO Add error messaging throughout that goes out into the email in case of failure
 
 import smtplib
+from email.mime.text import MIMEText
 import subprocess
 import argparse
 import sys
@@ -18,9 +19,9 @@ CFG_NFO = "/home/{0}/.cfgnfo"
 FILE_PATH = os.path.realpath(__file__)
 
 # Will change
-email_from = 'espa@espa.cr.usgs.gov'
-email_to = ['klsmith@usgs.gov']
-email_subject = "LSRD - Auto-credential changing"
+EMAIL_FROM = 'espa@espa.cr.usgs.gov'
+EMAIL_TO = ['klsmith@usgs.gov']
+EMAIL_SUBJECT = "LSRD - Auto-credential {0}"
 
 
 class DBConnect(object):
@@ -28,7 +29,8 @@ class DBConnect(object):
     Class for connecting to a postgresql database using a with statement
     """
 
-    def __init__(self, dbhost='', db='', dbuser='', dbpass='', dbport=3306, autocommit=False):
+    def __init__(self, dbhost='', db='', dbuser='', dbpass='', dbport=3306, autocommit=False,
+                 *args, **kwargs):
         self.conn = psycopg2.connect(host=dbhost, database=db, user=dbuser,
                                      password=dbpass, port=dbport)
         try:
@@ -91,10 +93,15 @@ class DBConnect(object):
         del self.conn
 
 
+class CredentialException(Exception):
+    pass
+
+
 def get_cfg(user):
     """
     Retrieve the configuration information from the .cfgnfo file
     Will need to be made more robust if the file changes
+
     :return: dict
     """
     cfg_info = {}
@@ -108,11 +115,30 @@ def get_cfg(user):
 
 
 def send_email(sender, recipient, subject, body):
+    """
+    Send out an email to give notice of success or failure
+
+    :param sender: who the email is from
+    :type sender: string
+    :param recipient: list of recipients of the email
+    :type recipient: list
+    :param subject: subject line of the email
+    :type subject: string
+    :param body: success or failure message to be passed
+    :type body: string
+    :return:
+    """
+    # This does not need to be anything fancy as it is used internally,
+    # as long as we can see if the script succeeded or where it failed
+    # at, then we are good to go
+    msg = MIMEText(body)
+    msg['Subject'] = subject
+    msg['From'] = sender
+    msg['To'] = recipient
 
     smtp = smtplib.SMTP("localhost")
-    smtp.sendmail(sender, recipient, body.as_string())
+    smtp.sendmail(sender, recipient, msg.as_string())
     smtp.quit()
-    pass
 
 
 def arg_parser():
@@ -143,12 +169,12 @@ def arg_parser():
 def gen_password(length=16):
     """
     Generate a random string of characters to use as a password
+    At least 1 lower case, 1 upper case, 1 number, and 1 special
 
     :param length: length of string
     :type length: int
     :return: password string
     """
-    #TODO add check to make sure it meets requirements
 
     char_ls = [string.ascii_lowercase,
                string.ascii_uppercase,
@@ -156,7 +182,16 @@ def gen_password(length=16):
                string.punctuation]
 
     chars = ''.join(char_ls)
-    paswrd = ''.join(random.SystemRandom().choice(chars) for _ in range(length))
+
+    i = 0
+    while i <= len(char_ls):
+        i = 0
+
+        paswrd = ''.join(random.SystemRandom().choice(chars) for _ in range(length))
+
+        for char_set in char_ls:
+            if set(char_set).intersection(set(paswrd)):
+                i += 1
 
     return paswrd
 
@@ -172,14 +207,9 @@ def update_db(passwrd, db_info):
     :return: exception message
     """
     sql_str = "update ordering_configuration set value = '{0}' where key = '{1}'".format(passwrd, 'landsatds.password')
-    try:
-        with DBConnect(**db_info) as db:
-            db.execute(sql_str)
-            db.commit()
-
-        return None
-    except Exception as e:
-        return e
+    with DBConnect(**db_info) as db:
+        db.execute(sql_str)
+        db.commit()
 
 
 def current_pass(db_info):
@@ -193,14 +223,11 @@ def current_pass(db_info):
 
     sql_str = "select value from ordering_configuration where key = 'landsatds.password'"
 
-    try:
-        with DBConnect(**db_info) as db:
-            db.select(sql_str)
-            curr = db[0]
+    with DBConnect(**db_info) as db:
+        db.select(sql_str)
+        curr = db[0]
 
-        return curr
-    except Exception as e:
-        return e
+    return curr
 
 
 def update_cron(user, freq=60, backdate=True):
@@ -210,7 +237,9 @@ def update_cron(user, freq=60, backdate=True):
     :param user: user to update password for
     :type user: string
     :param freq: number days to set the next cron job for
-    :param backdate:
+    :type freq: int
+    :param backdate: change the password ahead of time
+    :type backdate: bool
     :return:
     """
     chron_file = 'chron.tmp'
@@ -238,7 +267,7 @@ def update_cron(user, freq=60, backdate=True):
     subprocess.call(['crontab', chron_file, '&&', 'rm', chron_file])
 
 
-def change_pass(old_pass, new_pass):
+def change_pass(old_pass):
     """
     Update the password in the linux environment
 
@@ -251,13 +280,15 @@ def change_pass(old_pass, new_pass):
     #TODO Process needs to be verified, especially the regex portions
     #TODO Needs to return new pass in case it had to generate a new one
 
+    new_pass = gen_password()
+
     child = pexpect.spawn('passwd')
     child.expect('*[Pp]assword: ')
     child.sendline(old_pass)
     i = child.expect(['New password: ', '*Password incorrect: try again*'])
 
     if i == 1:
-        return 'Password retrieve from DB is incorrect'
+        raise CredentialException('Password retrieved from DB is incorrect')
 
     i = 1
     while i:
@@ -268,19 +299,33 @@ def change_pass(old_pass, new_pass):
 
     child.sendline(new_pass)
 
+    return new_pass
+
 
 def run():
-    # Written this way for ease of following the process flow in the future
-    # and it doesn't really need to be anything fancy
-
-    #TODO Add verification between steps and error message building for emailing
-    username, freq = arg_parser()
-    cfg_info = get_cfg(username)
-    old_pass = current_pass(cfg_info)
-    new_pass = gen_password()
-    change_pass(old_pass, new_pass)
-    update_db(new_pass, cfg_info)
-    update_cron(username, freq)
+    """
+    Change the password for a user and set up a cron job
+    to change it again based on the frequency
+    """
+    # Since this is mostly a fire and forget script it needs
+    # broad exception handling so whatever traceback gets generated
+    # is sent out in the email
+    msg = ''
+    success = ''
+    try:
+        username, freq = arg_parser()
+        cfg_info = get_cfg(username)
+        old_pass = current_pass(cfg_info)
+        new_pass = change_pass(old_pass)
+        update_db(new_pass, cfg_info)
+        update_cron(username, freq)
+        msg = 'User: {0} password has been updated'.format(username)
+        success = 'Successful'
+    except Exception as e:
+        msg = e
+        success = 'Failure'
+    finally:
+        send_email(EMAIL_FROM, EMAIL_TO, EMAIL_SUBJECT.format(success), msg)
 
 
 if __name__ == '__main__':
