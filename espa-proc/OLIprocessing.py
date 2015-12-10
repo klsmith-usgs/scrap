@@ -1,9 +1,5 @@
-from TMprocessing import VALID_INDICIES
-from TMprocessing import proc_source
-from TMprocessing import proc_cfmask
-from TMprocessing import proc_dem
-from TMprocessing import proc_dswe
-from TMprocessing import proc_emislst
+from TMprocessing import VALID_INDICIES, proc_source, proc_cfmask, proc_dem, proc_dswe,\
+    proc_emislst
 from TMprocessing import proc_landwatermask
 from TMprocessing import proc_sr_indicies
 from TMprocessing import get_methodlist
@@ -49,7 +45,7 @@ def proc_list(prod):
                         'emislst': proc_emislst}}
 
     if prod in products.keys():
-        return products['prod']
+        return products[prod]
     elif prod in VALID_INDICIES:
         return products['srindicies']
     else:

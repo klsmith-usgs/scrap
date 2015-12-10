@@ -153,7 +153,7 @@ class ProcessClass(object):
 if __name__ == '__main__':
     debug = True
 
-    test_dir = 'D:/ESPA/scrap/espa-proc/test_jsons'
+    test_dir = r'D:\ESPA\scrap\espa-proc\test_jsons'
     for json_file in os.listdir(test_dir):
         if json_file[-4:] == 'json':
             json_order = os.path.join(test_dir, json_file)
