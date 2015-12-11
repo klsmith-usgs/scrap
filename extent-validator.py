@@ -1,8 +1,9 @@
 from dbconnect import DBConnect
+from osgeo import osr
 
 
 class ExtentValidator(object):
-    def __init__(self):
+    def __init__(self, xmin, xmax, ymin, ymax, srid=0, wkt='', *args, **kwargs):
         pass
 
     def validate_frame(self):
@@ -15,4 +16,10 @@ class ExtentValidator(object):
         pass
 
     def comp_scenes(self):
+        pass
+
+    def build_tmpsrid(self):
+        pass
+
+    def wkt_to_proj4(self):
         pass

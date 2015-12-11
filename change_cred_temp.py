@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-#TODO Add error messaging throughout that goes out into the email in case of failure
-
 import smtplib
 from email.mime.text import MIMEText
 import subprocess
@@ -10,6 +8,8 @@ import string
 import random
 import os
 import datetime
+import traceback
+import re
 
 import pexpect
 from dbconnect import DBConnect
@@ -18,7 +18,7 @@ from dbconnect import DBConnect
 CFG_NFO = "/home/{0}/.cfgnfo"
 FILE_PATH = os.path.realpath(__file__)
 
-# Will change
+# This info should come from a config file
 EMAIL_FROM = 'espa@espa.cr.usgs.gov'
 EMAIL_TO = ['klsmith@usgs.gov']
 EMAIL_SUBJECT = "LSRD - Auto-credential {0}"
@@ -39,8 +39,13 @@ def get_cfg(user):
     with open(CFG_NFO.format(user), 'r') as f:
         next(f)
         for line in f:
-            key, val = line.split('=')
-            cfg_info[key] = val
+
+            try:
+                key, val = line.split('=')
+            except:
+                continue
+
+            cfg_info[key] = val.rstrip()
 
     return cfg_info
 
@@ -62,10 +67,11 @@ def send_email(sender, recipient, subject, body):
     # This does not need to be anything fancy as it is used internally,
     # as long as we can see if the script succeeded or where it failed
     # at, then we are good to go
+    print body
     msg = MIMEText(body)
     msg['Subject'] = subject
     msg['From'] = sender
-    msg['To'] = recipient
+    msg['To'] = ', '.join(recipient)
 
     smtp = smtplib.SMTP("localhost")
     smtp.sendmail(sender, recipient, msg.as_string())
@@ -94,7 +100,7 @@ def arg_parser():
         parser.print_help()
         sys.exit(1)
 
-    return args.username, args.frequency
+    return args.username[0], args.frequency
 
 
 def gen_password(length=16):
@@ -110,7 +116,7 @@ def gen_password(length=16):
     char_ls = [string.ascii_lowercase,
                string.ascii_uppercase,
                string.digits,
-               string.punctuation]
+               re.sub('[\'"]', '', string.punctuation)]
 
     chars = ''.join(char_ls)
 
@@ -156,12 +162,12 @@ def current_pass(db_info):
 
     with DBConnect(**db_info) as db:
         db.select(sql_str)
-        curr = db[0]
+        curr = db[0][0]
 
     return curr
 
 
-def update_cron(user, freq=60, backdate=True):
+def update_cron(user, freq=60):
     """
     Updates the crontab to run this script again with the same user and frequency
 
@@ -173,10 +179,7 @@ def update_cron(user, freq=60, backdate=True):
     :type backdate: bool
     :return:
     """
-    chron_file = 'chron.tmp'
-
-    if backdate:
-        freq -= 2
+    chron_file = 'tmp'
 
     new_date = datetime.date.today() + datetime.timedelta(days=freq)
 
@@ -188,14 +191,26 @@ def update_cron(user, freq=60, backdate=True):
 
     crons = subprocess.check_output(['crontab', '-l']).split('\n')
 
+    check = False
     for idx, line in enumerate(crons):
         if __file__ in line:
             crons[idx] = cron_str
+            check = True
+
+    if not check:
+        add = ['#-----------------------------',
+               '# Environment Credential Updating',
+               '#-----------------------------',
+               cron_str]
+
+        crons.extend(add)
 
     with open(chron_file, 'w') as f:
-        f.write('\n'.join(crons))
+        f.write('\n'.join(crons) + '\n')
 
-    subprocess.call(['crontab', chron_file, '&&', 'rm', chron_file])
+    msg = subprocess.check_output(['crontab', chron_file, '&&', 'rm', chron_file])
+    if 'errors' in msg:
+        raise CredentialException('Password Updated, but failed crontab update:\n{0}'.format(msg))
 
 
 def change_pass(old_pass):
@@ -208,11 +223,10 @@ def change_pass(old_pass):
     :type new_pass: string
     :return: exception message if fail
     """
-    #TODO Process needs to be verified, especially the regex portions
     child = pexpect.spawn('passwd')
-    child.expect('*[Pp]assword: ')
+    child.expect('password: ')
     child.sendline(old_pass)
-    i = child.expect(['New password: ', '*Password incorrect: try again*'])
+    i = child.expect(['New password: ', 'Password incorrect: try again'])
 
     if i == 1:
         raise CredentialException('Password retrieved from DB is incorrect')
@@ -221,11 +235,12 @@ def change_pass(old_pass):
     new_pass = gen_password()
     while i:
         child.sendline(new_pass)
-        i = child.expect(['Retype new password: ', 'BAD PASSWORD*'])
+        i = child.expect(['Retype new password: ', 'BAD PASSWORD'])
         if i:
             new_pass = gen_password()
 
     child.sendline(new_pass)
+    child.expect('all authentication tokens updated successfully.')
 
     return new_pass
 
@@ -238,8 +253,8 @@ def run():
     # Since this is mostly a fire and forget script it needs
     # broad exception handling so whatever traceback gets generated
     # is sent out in the email
-    msg = ''
-    success = ''
+    msg = 'General Failure'
+    success = 'Failure'
     try:
         username, freq = arg_parser()
         cfg_info = get_cfg(username)
@@ -249,9 +264,8 @@ def run():
         update_cron(username, freq)
         msg = 'User: {0} password has been updated'.format(username)
         success = 'Successful'
-    except Exception as e:
-        msg = e
-        success = 'Failure'
+    except Exception:
+        msg = str(traceback.format_exc())
     finally:
         send_email(EMAIL_FROM, EMAIL_TO, EMAIL_SUBJECT.format(success), msg)
 

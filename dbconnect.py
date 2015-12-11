@@ -8,9 +8,9 @@ class DBConnect(object):
 
     def __init__(self, dbhost='', db='', dbuser='', dbpass='', dbport=3306, autocommit=False,
                  *args, **kwargs):
-        self.conn = psycopg2.connect(host=dbhost, database=db, user=dbuser,
-                                     password=dbpass, port=dbport)
         try:
+            self.conn = psycopg2.connect(host=dbhost, database=db, user=dbuser,
+                                         password=dbpass, port=dbport)
             self.cursor = self.conn.cursor()
         except psycopg2.Error:
             raise
